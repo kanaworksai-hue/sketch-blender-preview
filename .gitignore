@@ -1,6 +1,10 @@
 assets/*.glb
 assets/*.gltf
 assets/*.bin
+assets/*.obj
+assets/*.mtl
+assets/*.fbx
+assets/*.stl
 assets/toolbar-reference.png
 preview*.png
 .DS_Store

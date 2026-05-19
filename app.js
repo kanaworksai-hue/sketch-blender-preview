@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { MTLLoader } from "three/addons/loaders/MTLLoader.js";
+import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { STLLoader } from "three/addons/loaders/STLLoader.js";
 
 const canvas = document.querySelector("#viewport");
 const loadingNote = document.querySelector("#loadingNote");
@@ -13,6 +17,7 @@ const modelMenuUpload = document.querySelector("#modelMenuUpload");
 const refMenuUpload = document.querySelector("#refMenuUpload");
 const modelingButton = document.querySelector("#modelingButton");
 const autoModelingButton = document.querySelector("#autoModelingButton");
+const resetTransformButton = document.querySelector("#resetTransformButton");
 const helpButton = document.querySelector("#helpButton");
 const helpPanel = document.querySelector("#helpPanel");
 const helpCloseButton = document.querySelector("#helpCloseButton");
@@ -21,6 +26,7 @@ const helpList = document.querySelector("#helpList");
 const languageButton = document.querySelector("#languageButton");
 const renderModeButton = document.querySelector("#renderModeButton");
 const modelFileInput = document.querySelector("#modelFileInput");
+const modelNameInput = document.querySelector("#modelNameInput");
 const refFileInput = document.querySelector("#refFileInput");
 const refImage = document.querySelector(".ref-note img");
 const refCaption = document.querySelector(".ref-note figcaption");
@@ -102,7 +108,8 @@ let hasCustomRef = false;
 let uploadedModelSlot = null;
 let autoModelSlot = null;
 let activeModelKind = "sample";
-let currentLanguage = "en";
+let currentLanguage = "zh";
+let customModelName = "";
 const clock = new THREE.Clock();
 const pencilLines = [];
 
@@ -125,7 +132,7 @@ const TEXT = {
     file: "File",
     help: "Help",
     helpItems: [
-      "File > Upload, or drop a .glb/.gltf model onto the view.",
+      "File > Upload model, or drop a .glb/.gltf/.obj/.fbx/.stl model onto the view.",
       "Image > Reference, or drop an image onto the view.",
       "Use Move, Rotate, and Scale on the left toolbar.",
       "Use sketch view / normal view to switch rendering.",
@@ -140,7 +147,7 @@ const TEXT = {
     renderNormal: "normal",
     renderSketch: "sketch",
     sketchView: "sketch view",
-    upload: "Upload",
+    upload: "Upload model",
   },
   ja: {
     autoModeling: "Auto Modeling",
@@ -148,7 +155,7 @@ const TEXT = {
     file: "ファイル",
     help: "ヘルプ",
     helpItems: [
-      "File > Upload、または .glb/.gltf を画面にドロップします。",
+      "ファイル > モデル読込、または .glb/.gltf/.obj/.fbx/.stl を画面にドロップします。",
       "Image > Reference、または画像をビューにドロップします。",
       "左ツールバーで移動、回転、拡大縮小を操作します。",
       "sketch view / normal view で表示を切り替えます。",
@@ -163,7 +170,7 @@ const TEXT = {
     renderNormal: "normal",
     renderSketch: "sketch",
     sketchView: "sketch view",
-    upload: "Upload",
+    upload: "モデル読込",
   },
   zh: {
     autoModeling: "Auto Modeling",
@@ -171,8 +178,8 @@ const TEXT = {
     file: "文件",
     help: "帮助",
     helpItems: [
-      "点击 File > Upload，或把 .glb/.gltf 模型拖进视图。",
-      "点击 Image > Reference，或把图片拖进视图。",
+      "点击文件 > 上传模型，或把 .glb/.gltf/.obj/.fbx/.stl 模型拖进视图。",
+      "点击图片 > Reference，或把图片拖进视图。",
       "左侧工具可以移动、旋转、放大缩小模型。",
       "用 sketch view / normal view 切换渲染模式。",
       "Auto Modeling 根据参考图生成简易模型；Modeling 切回上传好的模型。",
@@ -186,7 +193,7 @@ const TEXT = {
     renderNormal: "normal",
     renderSketch: "sketch",
     sketchView: "sketch view",
-    upload: "Upload",
+    upload: "上传模型",
   },
 };
 
@@ -199,6 +206,8 @@ setupReferenceUpload();
 setupDropUpload();
 setupRenderModeButton();
 setupModelingButton();
+setupResetButton();
+setupModelNameEditor();
 setupHelpAndLanguage();
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -370,6 +379,35 @@ function setupModelingButton() {
   });
 }
 
+function setupResetButton() {
+  resetTransformButton?.addEventListener("click", () => {
+    resetTransforms();
+  });
+}
+
+function setupModelNameEditor() {
+  if (!modelNameInput) return;
+  modelNameInput.addEventListener("focus", () => {
+    if (modelNameInput.value === "Name") {
+      modelNameInput.select();
+    }
+  });
+  modelNameInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      modelNameInput.blur();
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      updateModelNameField();
+      modelNameInput.blur();
+    }
+  });
+  modelNameInput.addEventListener("blur", () => {
+    saveCustomModelName(modelNameInput.value);
+  });
+}
+
 function setupHelpAndLanguage() {
   helpButton?.addEventListener("click", () => {
     if (!helpPanel) return;
@@ -390,8 +428,37 @@ function setupHelpAndLanguage() {
   applyLanguage();
 }
 
+function resetTransforms() {
+  modelRig.position.set(0, 0, 0);
+  modelScale = 1;
+  modelRig.scale.setScalar(modelScale);
+  modelYaw = initialModelYaw;
+  modelRig.rotation.y = modelYaw;
+  setActiveTool("view");
+  controls.update();
+  writeTransformState();
+  setUploadStatus("reset");
+}
+
+function saveCustomModelName(value) {
+  const nextName = value.trim();
+  customModelName = nextName === "Name" ? "" : nextName;
+  updateModelLabels(loadedModel?.name || "sample-simple.glb", {
+    sourceLabel: modelSourceField?.textContent || "",
+    uploadLabel: uploadStatus?.textContent || "",
+  });
+  const modelData = JSON.parse(canvas.dataset.model || "{}");
+  modelData.displayName = customModelName || modelData.name || "";
+  canvas.dataset.model = JSON.stringify(modelData);
+}
+
+function updateModelNameField() {
+  if (modelNameInput) modelNameInput.value = customModelName || "Name";
+}
+
 function applyLanguage() {
   const text = getText();
+  document.documentElement.lang = currentLanguage === "zh" ? "zh-CN" : currentLanguage;
   if (fileMenuButton) fileMenuButton.textContent = text.file;
   if (imageMenuButton) imageMenuButton.textContent = text.image;
   if (helpButton) helpButton.textContent = text.help;
@@ -528,8 +595,8 @@ function loadModel() {
 function loadLocalModelFiles(files) {
   const modelFile = files.find(isModelFile);
   if (!modelFile) {
-    setUploadStatus("pick .glb");
-    showLoading("Need .glb/.gltf");
+    setUploadStatus("pick model");
+    showLoading("Need model file");
     return;
   }
 
@@ -561,6 +628,7 @@ function loadLocalModelFiles(files) {
   });
 
   setUploadStatus("loading");
+  const mtlFile = files.find((file) => /\.mtl$/i.test(file.name));
   loadModelFromUrl(localAssetMap.get(modelFile.name), {
     name: modelFile.name,
     source: "local",
@@ -568,12 +636,40 @@ function loadLocalModelFiles(files) {
     uploadLabel: "local",
     kind: "user",
     manager,
+    mtlUrl: mtlFile ? localAssetMap.get(mtlFile.name) : "",
     objectUrls,
   });
 }
 
 function loadModelFromUrl(url, meta) {
   showLoading(`Loading ${meta.name}`);
+  const extension = getExtension(meta.name);
+
+  if (extension === "glb" || extension === "gltf") {
+    loadGltfModel(url, meta);
+    return;
+  }
+
+  if (extension === "obj") {
+    loadObjModel(url, meta);
+    return;
+  }
+
+  if (extension === "fbx") {
+    loadFbxModel(url, meta);
+    return;
+  }
+
+  if (extension === "stl") {
+    loadStlModel(url, meta);
+    return;
+  }
+
+  setUploadStatus("unsupported");
+  showLoading("Unsupported model");
+}
+
+function loadGltfModel(url, meta) {
   const loader = new GLTFLoader(meta.manager);
 
   loader.load(
@@ -598,6 +694,86 @@ function loadModelFromUrl(url, meta) {
       });
     }
   );
+}
+
+function loadObjModel(url, meta) {
+  const loadObject = (materials = null) => {
+    const loader = new OBJLoader(meta.manager);
+    if (materials) loader.setMaterials(materials);
+    loader.load(
+      url,
+      (root) => installModelScene(root, meta),
+      handleModelProgress(meta),
+      (error) => handleModelLoadError(error, meta)
+    );
+  };
+
+  if (!meta.mtlUrl) {
+    loadObject();
+    return;
+  }
+
+  const mtlLoader = new MTLLoader(meta.manager);
+  mtlLoader.load(
+    meta.mtlUrl,
+    (materials) => {
+      materials.preload();
+      loadObject(materials);
+    },
+    undefined,
+    () => loadObject()
+  );
+}
+
+function loadFbxModel(url, meta) {
+  const loader = new FBXLoader(meta.manager);
+  loader.load(
+    url,
+    (root) => installModelScene(root, meta, root.animations || []),
+    handleModelProgress(meta),
+    (error) => handleModelLoadError(error, meta)
+  );
+}
+
+function loadStlModel(url, meta) {
+  const loader = new STLLoader(meta.manager);
+  loader.load(
+    url,
+    (geometry) => {
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xf7f4ee,
+        roughness: 0.78,
+        metalness: 0.03,
+      });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.name = meta.name.replace(/\.[^.]+$/, "");
+      const root = new THREE.Group();
+      root.add(mesh);
+      installModelScene(root, meta);
+    },
+    handleModelProgress(meta),
+    (error) => handleModelLoadError(error, meta)
+  );
+}
+
+function handleModelProgress(meta) {
+  return (event) => {
+    if (!event.lengthComputable) return;
+    const progress = Math.round((event.loaded / event.total) * 100);
+    showLoading(`Loading ${meta.name} ${progress}%`);
+  };
+}
+
+function handleModelLoadError(error, meta) {
+  console.error(error);
+  if (meta.objectUrls) revokeObjectUrls(meta.objectUrls);
+  setUploadStatus("failed");
+  showLoading(`${meta.name} failed`);
+  canvas.dataset.model = JSON.stringify({
+    loaded: Boolean(loadedModel),
+    error: String(error?.message || error),
+    name: loadedModel?.name || "",
+  });
 }
 
 function installModel(gltf, meta) {
@@ -658,6 +834,7 @@ function installModelScene(root, meta, animations = [], options = {}) {
   canvas.dataset.model = JSON.stringify({
     loaded: true,
     meshes: meshCount,
+    displayName: customModelName || root.name,
     name: root.name,
     source: meta.source,
     kind: activeModelKind,
@@ -720,11 +897,13 @@ function revokeObjectUrls(urls) {
 }
 
 function updateModelLabels(name, meta) {
-  if (modelNameFields.viewport) modelNameFields.viewport.textContent = `(0) ${name}`;
-  if (modelNameFields.object) modelNameFields.object.textContent = name;
-  if (modelNameFields.modifier) modelNameFields.modifier.textContent = name;
-  if (modelSourceField) modelSourceField.textContent = meta.sourceLabel;
-  setUploadStatus(meta.uploadLabel);
+  const displayName = customModelName || name;
+  if (modelNameFields.viewport) modelNameFields.viewport.textContent = `(0) ${displayName}`;
+  if (modelNameFields.object) modelNameFields.object.textContent = displayName;
+  if (modelNameFields.modifier) modelNameFields.modifier.textContent = displayName;
+  if (modelSourceField && meta.sourceLabel) modelSourceField.textContent = meta.sourceLabel;
+  if (meta.uploadLabel) setUploadStatus(meta.uploadLabel);
+  updateModelNameField();
 }
 
 function setUploadStatus(text) {
@@ -771,6 +950,7 @@ function showUploadedModel() {
   canvas.dataset.model = JSON.stringify({
     loaded: true,
     meshes: meshCount,
+    displayName: customModelName || root.name,
     name: root.name,
     source: meta.source,
     kind: activeModelKind,
@@ -849,8 +1029,27 @@ function makeReferenceProxyModel() {
   addPart(root, new THREE.SphereGeometry(0.17, 20, 14), dark, [-0.34, 2.08, 0.64], [1.15, 1.15, 0.32], "visor-rim");
   addPart(root, new THREE.SphereGeometry(0.13, 20, 14), red, [-0.34, 2.08, 0.69], [1, 1, 0.24], "red-lens");
   addPart(root, new THREE.SphereGeometry(0.12, 20, 14), eyeBlue, [0.28, 2.1, 0.66], [0.75, 1, 0.24], "blue-eye");
+  addReferencePlane(root);
 
   return root;
+}
+
+function addReferencePlane(root) {
+  if (!activeRefObjectUrl) return;
+  const texture = new THREE.TextureLoader().load(activeRefObjectUrl);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.MeshStandardMaterial({
+    map: texture,
+    transparent: true,
+    roughness: 0.8,
+    metalness: 0,
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.72), material);
+  mesh.name = "reference-proxy-card";
+  mesh.position.set(0, 2.72, 0.72);
+  mesh.rotation.x = -0.08;
+  root.add(mesh);
 }
 
 function addPart(parent, geometry, material, position, scale, name, rotation = [0, 0, 0]) {
@@ -864,11 +1063,15 @@ function addPart(parent, geometry, material, position, scale, name, rotation = [
 }
 
 function isModelFile(file) {
-  return /\.(glb|gltf)$/i.test(file.name);
+  return /\.(glb|gltf|obj|fbx|stl)$/i.test(file.name);
 }
 
 function isImageFile(file) {
   return file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(file.name);
+}
+
+function getExtension(name) {
+  return name.split(".").pop()?.toLowerCase() || "";
 }
 
 function escapeText(text) {

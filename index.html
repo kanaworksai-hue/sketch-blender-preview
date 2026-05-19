@@ -26,7 +26,7 @@
             <span><del>Rander</del><span class="fix">Render</span></span>
             <span>Window</span>
             <button class="menu-item" id="helpButton" type="button"><del>Halp</del><span class="fix">Help</span></button>
-            <button class="menu-item lang-button" id="languageButton" type="button" aria-label="Switch language">EN</button>
+            <button class="menu-item lang-button" id="languageButton" type="button" aria-label="Switch language">中文</button>
           </div>
           <div class="sketch-menu file-menu" id="fileMenu" hidden>
             <button id="modelMenuUpload" type="button"><span class="sketch-icon icon-plus"></span><span>Upload</span></button>
@@ -44,13 +44,13 @@
           </div>
           <aside class="help-panel" id="helpPanel" hidden aria-label="operation guide">
             <button class="help-close" id="helpCloseButton" type="button" aria-label="Close help">x</button>
-            <h2 data-help-title>Quick guide</h2>
+            <h2 data-help-title>操作指南</h2>
             <ol id="helpList">
-              <li>File > Upload, or drop a .glb/.gltf model onto the view.</li>
-              <li>Image > Reference, or drop an image onto the view.</li>
-              <li>Use Move, Rotate, and Scale on the left toolbar.</li>
-              <li>Use sketch view / normal view to switch rendering.</li>
-              <li>Auto Modeling makes a simple proxy from a reference. Modeling returns to your uploaded model.</li>
+              <li>点击文件 > 上传模型，或把 .glb/.gltf/.obj/.fbx/.stl 模型拖进视图。</li>
+              <li>点击图片 > Reference，或把图片拖进视图。</li>
+              <li>左侧工具可以移动、旋转、放大缩小模型。</li>
+              <li>用 sketch view / normal view 切换渲染模式。</li>
+              <li>Auto Modeling 根据参考图生成简易模型；Modeling 切回上传好的模型。</li>
             </ol>
           </aside>
         </header>
@@ -64,7 +64,7 @@
             </div>
             <div class="tool-panel select-panel">
               <button class="is-framed is-active" title="Select" aria-label="Select" data-tool="view"><span class="sketch-icon icon-select"></span></button>
-              <button title="Cursor" aria-label="Cursor"><span class="sketch-icon icon-crosshair"></span></button>
+              <button title="Reset" aria-label="Reset transforms" id="resetTransformButton" type="button"><span class="sketch-icon icon-reset"></span></button>
             </div>
             <div class="tool-panel transform-panel">
               <button title="Move" aria-label="Move" data-tool="move"><span class="sketch-icon icon-move"></span></button>
@@ -115,16 +115,15 @@
               <span><span class="sketch-icon icon-hand"></span></span>
               <span><span class="sketch-icon icon-zoom"></span></span>
             </div>
-            <a class="follow-note" href="https://x.com/KanaWorks_AI" target="_blank" rel="noreferrer">
-              <span>Want more?</span>
-              <strong>follow me</strong>
-              <em>@KanaWorks_AI</em>
-            </a>
             <figure class="ref-note" aria-label="kanaC reference sheet">
               <img src="./assets/kanaC.png" alt="kanaC rabbit character turnaround reference" />
               <figcaption><del>refe</del><span class="fix">ref</span> sheet</figcaption>
             </figure>
             <aside class="transform-card" aria-label="transform panel">
+              <label class="name-row">
+                <span>Name</span>
+                <input id="modelNameInput" type="text" value="Name" aria-label="Model display name" />
+              </label>
               <h2><del>Transfrom</del><span class="fix">Transform</span></h2>
               <p><del>Medain</del><span class="fix">Median</span></p>
               <div class="field-row"><span>X</span><b data-transform-field="x">0.00 m</b></div>
@@ -157,7 +156,7 @@
                 class="model-file-input"
                 id="modelFileInput"
                 type="file"
-                accept=".glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2,.basis,model/gltf-binary,model/gltf+json,image/*"
+                accept=".glb,.gltf,.obj,.mtl,.fbx,.stl,.bin,.png,.jpg,.jpeg,.webp,.ktx2,.basis,model/gltf-binary,model/gltf+json,image/*"
                 multiple
               />
               <input
@@ -175,6 +174,11 @@
                 <div class="split-row"><span>Style</span><b>toon</b></div>
                 <label><input type="checkbox" checked /> Optimal</label>
               </div>
+              <a class="follow-note side-follow" href="https://x.com/KanaWorks_AI" target="_blank" rel="noreferrer">
+                <span>Want more?</span>
+                <strong>follow me</strong>
+                <em>@KanaWorks_AI</em>
+              </a>
               <div class="scribble-line"></div>
               <div class="scribble-line short"></div>
             </section>

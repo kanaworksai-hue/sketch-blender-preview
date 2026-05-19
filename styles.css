@@ -9,8 +9,8 @@
   --accent: #b45d73;
   --warm: #efe6bc;
   --button-ink: #151515;
-  --button-frame: #eba12a;
-  --button-frame-soft: rgba(235, 161, 42, 0.72);
+  --button-frame: #45a55b;
+  --button-frame-soft: rgba(69, 165, 91, 0.76);
 }
 
 * {
@@ -556,6 +556,27 @@ button.tab,
   background:
     linear-gradient(var(--ink-deep), var(--ink-deep)) center/2px 20px no-repeat,
     linear-gradient(var(--ink-deep), var(--ink-deep)) center/20px 2px no-repeat;
+}
+
+.icon-reset::before {
+  left: 4px;
+  top: 4px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--ink-deep);
+  border-left-color: transparent;
+  border-radius: 50%;
+  transform: rotate(-26deg);
+}
+
+.icon-reset::after {
+  left: 2px;
+  top: 3px;
+  width: 8px;
+  height: 8px;
+  border-left: 2px solid var(--ink-deep);
+  border-bottom: 2px solid var(--ink-deep);
+  transform: rotate(14deg) skew(-8deg);
 }
 
 .icon-move::before {
@@ -1139,6 +1160,16 @@ body.is-file-dragging .drop-hint {
   transform: rotate(-2.6deg);
 }
 
+.side-follow {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  min-width: 0;
+  margin: 14px 0 0;
+  transform: rotate(-1.5deg);
+}
+
 .follow-note::before,
 .follow-note::after {
   content: "";
@@ -1236,6 +1267,39 @@ body.is-file-dragging .drop-hint {
   border-radius: 7px 4px 8px 5px;
   transform: rotate(0.45deg);
   pointer-events: none;
+}
+
+.name-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  margin: 0 0 9px;
+  pointer-events: auto;
+}
+
+.name-row span {
+  color: rgba(64, 68, 132, 0.85);
+}
+
+.name-row input {
+  min-width: 0;
+  height: 25px;
+  padding: 1px 7px 2px;
+  color: var(--button-ink);
+  background: rgba(255, 255, 255, 0.5);
+  border: 2px solid var(--button-frame-soft);
+  border-radius: 4px 8px 4px 6px;
+  font-family: "Bradley Hand", "Segoe Print", "Chalkboard SE", "Comic Sans MS", cursive;
+  font-size: 15px;
+  outline: none;
+  transform: rotate(-0.7deg);
+}
+
+.name-row input:focus {
+  background: rgba(255, 253, 244, 0.92);
+  border-color: var(--button-frame);
 }
 
 .transform-card h2,
@@ -1469,15 +1533,34 @@ body.is-file-dragging .drop-hint {
   }
 
   .app-shell {
-    grid-template-rows: 63px 1fr 78px;
+    grid-template-rows: 104px 1fr 72px;
     width: 100%;
     min-width: 0;
   }
 
+  .top-bar {
+    padding: 5px 6px 3px;
+  }
+
   .main-grid {
     width: 100%;
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 48px minmax(0, 1fr);
     overflow: hidden;
+  }
+
+  .tool-strip {
+    gap: 6px;
+    padding: 6px 5px;
+  }
+
+  .tool-palette,
+  .tool-panel {
+    width: 34px;
+  }
+
+  .tool-strip button {
+    width: 25px;
+    height: 25px;
   }
 
   .viewport-panel {
@@ -1486,45 +1569,69 @@ body.is-file-dragging .drop-hint {
     min-width: 0;
   }
 
-  .right-panels,
-  .transform-card {
+  .right-panels {
     display: none;
+  }
+
+  .transform-card {
+    display: block;
+    top: 39px;
+    right: 7px;
+    width: 156px;
+    padding: 7px 8px 9px;
+    font-size: 11px;
+    transform: scale(0.86) rotate(0.45deg);
+    transform-origin: top right;
+  }
+
+  .transform-card h2,
+  .transform-card p,
+  .transform-card .scribble-line,
+  .property-row {
+    display: none;
+  }
+
+  .field-row,
+  .split-row {
+    min-height: 17px;
+  }
+
+  .name-row {
+    grid-template-columns: 1fr;
+    gap: 3px;
+    margin-bottom: 5px;
+  }
+
+  .name-row input {
+    height: 23px;
+    font-size: 13px;
   }
 
   .view-gizmo,
   .float-tools {
-    right: 16px;
-  }
-
-  .follow-note {
-    right: 10px;
-    bottom: 96px;
-    min-width: 116px;
-    padding: 6px 8px 7px;
-    transform: rotate(-2.6deg) scale(0.84);
-    transform-origin: right bottom;
+    right: 7px;
+    transform: scale(0.82);
+    transform-origin: top right;
   }
 
   .ref-note {
-    display: none;
+    display: block;
+    left: 10px;
+    bottom: 11px;
+    width: 116px;
+    padding: 5px;
   }
 
-  .follow-note span {
-    font-size: 12px;
-  }
-
-  .follow-note strong {
-    font-size: 18px;
-  }
-
-  .follow-note em {
-    font-size: 11px;
+  .ref-note img {
+    max-height: 54px;
   }
 
   .workspace-row,
   .mode-row,
   .menu-row {
     gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
   .brand-logo {
@@ -1535,7 +1642,31 @@ body.is-file-dragging .drop-hint {
   }
 
   .workspace-row {
+    height: auto;
     padding-right: 58px;
+    flex-wrap: wrap;
+    align-content: start;
+  }
+
+  .menu-row {
+    height: auto;
+    padding-right: 60px;
+    flex-wrap: wrap;
+  }
+
+  .sketch-menu {
+    top: 36px;
+  }
+
+  .image-menu {
+    left: 98px;
+  }
+
+  .help-panel {
+    top: 38px;
+    right: 8px;
+    width: min(330px, calc(100vw - 24px));
+    font-size: 13px;
   }
 
   .scene-chip:nth-of-type(4),

@@ -6,7 +6,7 @@ A static, hand-drawn Blender-style 3D playground for local model previews. It ru
 
 ## Features
 
-- Upload a `.glb` or `.gltf` from `File > Upload`, or drop it onto the viewport.
+- Upload a `.glb`, `.gltf`, `.obj`, `.fbx`, or `.stl` from `File > Upload model`, or drop it onto the viewport.
 - Add a reference image from `Image > Reference`, or drop an image onto the viewport.
 - Switch between normal rendering and the toon/sketch blue-outline style.
 - Move, rotate, and scale the model with the hand-drawn toolbar.
