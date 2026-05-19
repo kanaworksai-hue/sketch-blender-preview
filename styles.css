@@ -1232,6 +1232,10 @@ body.is-file-dragging .drop-hint {
   pointer-events: none;
 }
 
+.ref-note[hidden] {
+  display: none;
+}
+
 .ref-note img {
   display: block;
   width: 100%;
@@ -1243,6 +1247,12 @@ body.is-file-dragging .drop-hint {
   filter: saturate(0.45) contrast(0.85);
   border-bottom: 2px solid rgba(79, 85, 166, 0.16);
   background: rgba(255, 255, 255, 0.36);
+}
+
+body.render-grease .viewport-panel {
+  background:
+    repeating-linear-gradient(88deg, rgba(97, 112, 82, 0.028) 0 1px, transparent 1px 22px),
+    linear-gradient(180deg, rgba(255, 239, 202, 0.34), rgba(255, 254, 247, 0.78));
 }
 
 .ref-note figcaption {

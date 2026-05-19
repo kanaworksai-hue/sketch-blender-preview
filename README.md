@@ -8,16 +8,17 @@ A static, hand-drawn Blender-style 3D playground for local model previews. It ru
 
 - Upload a `.glb`, `.gltf`, `.obj`, `.fbx`, or `.stl` from `File > Upload model`, or drop it onto the viewport.
 - Add a reference image from `Image > Reference`, or drop an image onto the viewport.
-- Switch between normal rendering and the toon/sketch blue-outline style.
+- Switch between normal rendering, black sketch line-art with loose construction outlines, and a Grease Pencil-inspired pastel line style.
 - Move, rotate, and scale the model with the hand-drawn toolbar.
 - Use Reset to restore the model position, direction, and scale.
 - Read the built-in Help panel and cycle the UI language between English and Japanese.
+- Starts as an empty workbench, with no bundled character model or reference sheet.
 
 ## Privacy
 
 Model and reference uploads are local browser reads. This demo does not upload files to a server.
 
-The private rabbit `.glb` model is intentionally not included in this public repository.
+The private rabbit `.glb` model and character reference sheet are intentionally not included in this public repository.
 
 ## Run Locally
 

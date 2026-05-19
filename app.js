@@ -27,6 +27,7 @@ const renderModeButton = document.querySelector("#renderModeButton");
 const modelFileInput = document.querySelector("#modelFileInput");
 const modelNameInput = document.querySelector("#modelNameInput");
 const refFileInput = document.querySelector("#refFileInput");
+const refNote = document.querySelector(".ref-note");
 const refImage = document.querySelector(".ref-note img");
 const refCaption = document.querySelector(".ref-note figcaption");
 const modelNameFields = {
@@ -39,6 +40,7 @@ const modelSourceField = document.querySelector("[data-model-source]");
 const refStatus = document.querySelector("[data-ref-status]");
 const renderModeLabel = document.querySelector("[data-render-mode-label]");
 const renderModeField = document.querySelector("[data-render-mode-field]");
+const renderStyleField = document.querySelector("[data-render-style]");
 const transformFields = {
   x: document.querySelector('[data-transform-field="x"]'),
   y: document.querySelector('[data-transform-field="y"]'),
@@ -83,7 +85,10 @@ fill.position.set(-4.2, 2.8, -2.4);
 scene.add(fill);
 
 const ink = new THREE.Color(0x4c54a8);
+const sketchInk = new THREE.Color(0x1f2323);
+const greaseInk = new THREE.Color(0x5e746d);
 const paperWhite = new THREE.Color(0xfffdf8);
+const greasePaper = new THREE.Color(0xf8e2b8);
 const toonGradient = makeToonGradient();
 const modelRig = new THREE.Group();
 const initialModelYaw = -0.14;
@@ -104,7 +109,7 @@ let activeRefObjectUrl = "";
 let renderMode = "sketch";
 let hasCustomRef = false;
 let uploadedModelSlot = null;
-let activeModelKind = "sample";
+let activeModelKind = "empty";
 let currentLanguage = "en";
 let customModelName = "";
 const clock = new THREE.Clock();
@@ -131,7 +136,7 @@ const TEXT = {
       "File > Upload model, or drop a .glb/.gltf/.obj/.fbx/.stl model onto the view.",
       "Image > Reference, or drop an image onto the view.",
       "Use Move, Rotate, and Scale on the left toolbar.",
-      "Use sketch view / normal view to switch rendering.",
+      "Switch between normal view, sketch view, and Grease Pencil view.",
       "Use Reset to restore the model position, direction, and scale.",
     ],
     helpTitle: "Quick guide",
@@ -140,6 +145,8 @@ const TEXT = {
     modeling: "Modeling",
     normalView: "normal view",
     reference: "Reference",
+    greaseView: "Grease Pencil view",
+    renderGrease: "grease pencil",
     renderNormal: "normal",
     renderSketch: "sketch",
     sketchView: "sketch view",
@@ -153,7 +160,7 @@ const TEXT = {
       "ファイル > モデル読込、または .glb/.gltf/.obj/.fbx/.stl を画面にドロップします。",
       "Image > Reference、または画像をビューにドロップします。",
       "左ツールバーで移動、回転、拡大縮小を操作します。",
-      "sketch view / normal view で表示を切り替えます。",
+      "normal view、sketch view、Grease Pencil view を切り替えます。",
       "Reset でモデルの位置、向き、拡大縮小を元に戻します。",
     ],
     helpTitle: "操作ガイド",
@@ -162,6 +169,8 @@ const TEXT = {
     modeling: "Modeling",
     normalView: "normal view",
     reference: "Reference",
+    greaseView: "Grease Pencil view",
+    renderGrease: "grease pencil",
     renderNormal: "normal",
     renderSketch: "sketch",
     sketchView: "sketch view",
@@ -170,7 +179,7 @@ const TEXT = {
 };
 
 makeGround(scene);
-loadModel();
+initializeEmptyScene();
 setupToolButtons();
 setupMenus();
 setupModelUpload();
@@ -336,7 +345,7 @@ function handleDroppedFiles(files) {
 
 function setupRenderModeButton() {
   renderModeButton?.addEventListener("click", () => {
-    setRenderMode(renderMode === "sketch" ? "normal" : "sketch");
+    setRenderMode(nextRenderMode());
   });
   updateRenderModeUI();
 }
@@ -411,7 +420,7 @@ function resetTransforms() {
 function saveCustomModelName(value) {
   const nextName = value.trim();
   customModelName = nextName === "Name" ? "" : nextName;
-  updateModelLabels(loadedModel?.name || "sample-simple.glb", {
+  updateModelLabels(loadedModel?.name || "No model", {
     sourceLabel: modelSourceField?.textContent || "",
     uploadLabel: uploadStatus?.textContent || "",
   });
@@ -449,6 +458,12 @@ function applyLanguage() {
 
 function getText() {
   return TEXT[currentLanguage] || TEXT.en;
+}
+
+function nextRenderMode() {
+  const modes = ["sketch", "grease", "normal"];
+  const nextIndex = (modes.indexOf(renderMode) + 1) % modes.length;
+  return modes[nextIndex];
 }
 
 function setActiveTool(tool) {
@@ -549,14 +564,24 @@ function formatScale(value) {
   return `${value.toFixed(2)} x`;
 }
 
-function loadModel() {
-  installModelScene(makeReferenceProxyModel(), {
-    name: "sample-simple.glb",
-    source: "sample",
-    sourceLabel: "sample",
-    uploadLabel: "sample",
-    kind: "sample",
+function initializeEmptyScene() {
+  activeModelKind = "empty";
+  updateModelLabels("No model", {
+    sourceLabel: "none",
+    uploadLabel: "none",
   });
+  if (refStatus) refStatus.textContent = "none";
+  canvas.dataset.model = JSON.stringify({
+    loaded: false,
+    meshes: 0,
+    displayName: "",
+    name: "",
+    source: "none",
+    kind: activeModelKind,
+  });
+  writeTransformState();
+  updateRenderModeUI();
+  hideLoading();
 }
 
 function loadLocalModelFiles(files) {
@@ -924,6 +949,9 @@ function loadReferenceImage(file) {
   activeRefObjectUrl = URL.createObjectURL(file);
   hasCustomRef = true;
 
+  if (refNote) {
+    refNote.hidden = false;
+  }
   if (refImage) {
     refImage.src = activeRefObjectUrl;
     refImage.alt = `${file.name} reference image`;
@@ -933,49 +961,6 @@ function loadReferenceImage(file) {
   }
   if (refStatus) refStatus.textContent = file.name;
   hideLoading();
-}
-
-function makeReferenceProxyModel() {
-  const root = new THREE.Group();
-  root.name = "ref-simple.glb";
-
-  const fur = new THREE.MeshStandardMaterial({ color: 0xfffbf3, roughness: 0.82, metalness: 0.02 });
-  const innerEar = new THREE.MeshStandardMaterial({ color: 0x92dcff, roughness: 0.76, metalness: 0.02 });
-  const blush = new THREE.MeshStandardMaterial({ color: 0xffb8bb, roughness: 0.9, metalness: 0 });
-  const hoodie = new THREE.MeshStandardMaterial({ color: 0xf2bd20, roughness: 0.72, metalness: 0.02 });
-  const blue = new THREE.MeshStandardMaterial({ color: 0x174574, roughness: 0.66, metalness: 0.06 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x16253d, roughness: 0.54, metalness: 0.12 });
-  const red = new THREE.MeshStandardMaterial({ color: 0xff1f1f, roughness: 0.35, metalness: 0.25 });
-  const eyeBlue = new THREE.MeshStandardMaterial({ color: 0x20a5ef, roughness: 0.26, metalness: 0.08 });
-
-  addPart(root, new THREE.SphereGeometry(0.72, 32, 20), fur, [0, 2.12, 0], [1.12, 0.9, 0.96], "head");
-  addPart(root, new THREE.SphereGeometry(0.19, 16, 12), blush, [-0.44, 1.92, 0.57], [1, 0.5, 0.2], "cheek-left");
-  addPart(root, new THREE.SphereGeometry(0.19, 16, 12), blush, [0.44, 1.92, 0.57], [1, 0.5, 0.2], "cheek-right");
-  addPart(root, new THREE.SphereGeometry(0.42, 24, 18), fur, [-0.42, 3.02, -0.02], [0.42, 1.52, 0.28], "ear-left", [0, 0, 0.28]);
-  addPart(root, new THREE.SphereGeometry(0.42, 24, 18), fur, [0.42, 3.02, -0.02], [0.42, 1.52, 0.28], "ear-right", [0, 0, -0.28]);
-  addPart(root, new THREE.SphereGeometry(0.25, 20, 14), innerEar, [-0.42, 3.03, 0.06], [0.32, 1.12, 0.08], "inner-ear-left", [0, 0, 0.28]);
-  addPart(root, new THREE.SphereGeometry(0.25, 20, 14), innerEar, [0.42, 3.03, 0.06], [0.32, 1.12, 0.08], "inner-ear-right", [0, 0, -0.28]);
-  addPart(root, new THREE.SphereGeometry(0.58, 28, 18), hoodie, [0, 1.1, 0], [0.92, 1.08, 0.66], "hoodie");
-  addPart(root, new THREE.BoxGeometry(0.16, 0.72, 0.08), dark, [0, 1.1, 0.6], [1, 1, 1], "zipper");
-  addPart(root, new THREE.SphereGeometry(0.24, 18, 12), blue, [-0.28, 0.38, 0], [0.9, 1.1, 0.85], "leg-left");
-  addPart(root, new THREE.SphereGeometry(0.24, 18, 12), blue, [0.28, 0.38, 0], [0.9, 1.1, 0.85], "leg-right");
-  addPart(root, new THREE.SphereGeometry(0.24, 18, 12), dark, [-0.34, 0.02, 0.14], [1.35, 0.5, 0.82], "shoe-left");
-  addPart(root, new THREE.SphereGeometry(0.24, 18, 12), dark, [0.34, 0.02, 0.14], [1.35, 0.5, 0.82], "shoe-right");
-  addPart(root, new THREE.SphereGeometry(0.17, 20, 14), dark, [-0.34, 2.08, 0.64], [1.15, 1.15, 0.32], "visor-rim");
-  addPart(root, new THREE.SphereGeometry(0.13, 20, 14), red, [-0.34, 2.08, 0.69], [1, 1, 0.24], "red-lens");
-  addPart(root, new THREE.SphereGeometry(0.12, 20, 14), eyeBlue, [0.28, 2.1, 0.66], [0.75, 1, 0.24], "blue-eye");
-
-  return root;
-}
-
-function addPart(parent, geometry, material, position, scale, name, rotation = [0, 0, 0]) {
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.name = name;
-  mesh.position.set(...position);
-  mesh.scale.set(...scale);
-  mesh.rotation.set(...rotation);
-  parent.add(mesh);
-  return mesh;
 }
 
 function isModelFile(file) {
@@ -1011,9 +996,16 @@ function prepareModelForRendering(root) {
 
 function setRenderMode(mode) {
   renderMode = mode;
+  updateScenePaper(mode);
   if (loadedModel) applyRenderMode(loadedModel, renderMode);
   updateRenderModeUI();
   writeTransformState();
+}
+
+function updateScenePaper(mode) {
+  const paper = mode === "grease" ? 0xffefca : 0xfffefa;
+  scene.background.set(paper);
+  renderer.setClearColor(paper, 1);
 }
 
 function applyRenderMode(root, mode) {
@@ -1029,23 +1021,55 @@ function applyRenderMode(root, mode) {
     if (mode === "normal") {
       mesh.material = cloneMaterialSet(mesh.userData.originalMaterial);
       mesh.renderOrder = 1;
+    } else if (mode === "grease") {
+      mesh.material = Array.isArray(mesh.userData.originalMaterial)
+        ? mesh.userData.originalMaterial.map((material) => makeGreasePencilMaterial(material))
+        : makeGreasePencilMaterial(mesh.userData.originalMaterial);
+      mesh.renderOrder = 2;
+      addSketchOutline(mesh, {
+        color: greaseInk,
+        name: "grease-pencil-outline",
+        opacity: 0.42,
+        scale: 1.014,
+      });
+      addScribbleMeshLines(mesh, {
+        color: greaseInk,
+        opacity: 0.1,
+      });
     } else {
       mesh.material = Array.isArray(mesh.userData.originalMaterial)
         ? mesh.userData.originalMaterial.map((material) => makeSketchMaterial(material))
         : makeSketchMaterial(mesh.userData.originalMaterial);
       mesh.renderOrder = 2;
-      addSketchOutline(mesh);
+      addSketchOutline(mesh, {
+        color: sketchInk,
+        name: "black-sketch-outline",
+        opacity: 0.92,
+        scale: 1.034,
+      });
+      addEdgeInkLines(mesh, {
+        color: sketchInk,
+        opacity: 0.68,
+        scale: 1.006,
+        thresholdAngle: 18,
+      });
+      addScribbleMeshLines(mesh, {
+        color: sketchInk,
+        maxSegments: 1600,
+        opacity: 0.11,
+      });
     }
   }
 
   return meshes.length;
 }
 
-function addSketchOutline(mesh) {
-  const outline = new THREE.Mesh(mesh.geometry, makeOutlineMaterial(0.72));
-  outline.name = "blue-sketch-outline";
+function addSketchOutline(mesh, options = {}) {
+  const outline = new THREE.Mesh(mesh.geometry, makeOutlineMaterial(options.opacity ?? 0.72, options.color || ink));
+  outline.name = options.name || "blue-sketch-outline";
   outline.userData.isSketchOutline = true;
-  outline.scale.setScalar(1.045);
+  outline.scale.setScalar(options.scale ?? 1.045);
+  if (options.offset) outline.position.set(...options.offset);
   outline.renderOrder = 0;
   outline.frustumCulled = false;
   mesh.userData.sketchOutlines = mesh.userData.sketchOutlines || [];
@@ -1053,9 +1077,37 @@ function addSketchOutline(mesh) {
   mesh.add(outline);
 }
 
+function addEdgeInkLines(mesh, options = {}) {
+  const source = mesh.geometry;
+  const position = source?.attributes?.position;
+  if (!position || position.count > 80000) return;
+
+  const geometry = new THREE.EdgesGeometry(source, options.thresholdAngle ?? 20);
+  const material = new THREE.LineBasicMaterial({
+    color: options.color || sketchInk,
+    transparent: true,
+    opacity: options.opacity ?? 0.62,
+    depthTest: true,
+    depthWrite: false,
+  });
+  const lines = new THREE.LineSegments(geometry, material);
+  lines.name = "sketch-ink-edge-lines";
+  lines.userData.isSketchOutline = true;
+  lines.userData.ownsGeometry = true;
+  lines.scale.setScalar(options.scale ?? 1.004);
+  lines.renderOrder = 6;
+  lines.frustumCulled = false;
+  mesh.userData.sketchOutlines = mesh.userData.sketchOutlines || [];
+  mesh.userData.sketchOutlines.push(lines);
+  mesh.add(lines);
+}
+
 function removeSketchOutlines(mesh) {
   for (const outline of mesh.userData.sketchOutlines || []) {
     mesh.remove(outline);
+    if (outline.userData.ownsGeometry) {
+      outline.geometry?.dispose?.();
+    }
     disposeRenderMaterials(outline.material);
   }
   mesh.userData.sketchOutlines = [];
@@ -1078,14 +1130,27 @@ function disposeRenderMaterials(material) {
 
 function updateRenderModeUI() {
   const text = getText();
-  if (renderModeLabel) renderModeLabel.textContent = renderMode === "sketch" ? text.sketchView : text.normalView;
-  if (renderModeField) renderModeField.textContent = renderMode === "sketch" ? text.renderSketch : text.renderNormal;
+  const labels = {
+    grease: text.greaseView,
+    normal: text.normalView,
+    sketch: text.sketchView,
+  };
+  const fieldLabels = {
+    grease: text.renderGrease,
+    normal: text.renderNormal,
+    sketch: text.renderSketch,
+  };
+  if (renderModeLabel) renderModeLabel.textContent = labels[renderMode] || text.sketchView;
+  if (renderModeField) renderModeField.textContent = fieldLabels[renderMode] || text.renderSketch;
+  if (renderStyleField) renderStyleField.textContent = renderMode === "grease" ? "grease" : renderMode === "normal" ? "original" : "toon";
   document.body.classList.toggle("render-normal", renderMode === "normal");
+  document.body.classList.toggle("render-grease", renderMode === "grease");
+  document.body.classList.toggle("render-sketch", renderMode === "sketch");
 }
 
 function makeSketchMaterial(source = {}) {
   const color = source.color ? source.color.clone() : paperWhite.clone();
-  color.lerp(paperWhite, source.map ? 0.08 : 0.5);
+  color.lerp(paperWhite, source.map ? 0.18 : 0.66);
 
   const material = new THREE.MeshToonMaterial({
     color,
@@ -1107,9 +1172,36 @@ function makeSketchMaterial(source = {}) {
   return material;
 }
 
-function makeOutlineMaterial(opacity) {
+function makeGreasePencilMaterial(source = {}) {
+  const color = source.color ? source.color.clone() : new THREE.Color(0xb8d8d1);
+  const hsl = {};
+  color.getHSL(hsl);
+  color.setHSL(hsl.h, Math.min(0.48, hsl.s * 0.62 + 0.08), Math.min(0.84, hsl.l * 0.46 + 0.48));
+  color.lerp(greasePaper, source.map ? 0.12 : 0.18);
+
+  const material = new THREE.MeshToonMaterial({
+    color,
+    map: source.map || null,
+    normalMap: source.normalMap || null,
+    gradientMap: toonGradient,
+    transparent: Boolean(source.transparent),
+    opacity: source.opacity ?? 1,
+    alphaTest: source.alphaTest ?? 0,
+    side: THREE.DoubleSide,
+    depthWrite: true,
+  });
+
+  if (material.map) {
+    material.map.colorSpace = THREE.SRGBColorSpace;
+  }
+
+  material.name = `grease-pencil-${source.name || "material"}`;
+  return material;
+}
+
+function makeOutlineMaterial(opacity, color = ink) {
   return new THREE.MeshBasicMaterial({
-    color: ink,
+    color,
     side: THREE.BackSide,
     transparent: true,
     opacity,
@@ -1117,22 +1209,22 @@ function makeOutlineMaterial(opacity) {
   });
 }
 
-function addScribbleMeshLines(mesh) {
+function addScribbleMeshLines(mesh, options = {}) {
   const source = mesh.geometry;
   const position = source?.attributes?.position;
   const index = source?.index;
-  if (!position || !index) return;
+  if (!position) return;
 
-  const triangleCount = Math.floor(index.count / 3);
-  const maxSegments = 6200;
+  const triangleCount = Math.floor((index?.count || position.count) / 3);
+  const maxSegments = options.maxSegments ?? 6200;
   const stride = Math.max(1, Math.floor(triangleCount / maxSegments));
   const points = [];
   const temp = new THREE.Vector3();
 
   for (let tri = 0; tri < triangleCount; tri += stride) {
-    const a = index.getX(tri * 3);
-    const b = index.getX(tri * 3 + 1);
-    const c = index.getX(tri * 3 + 2);
+    const a = index ? index.getX(tri * 3) : tri * 3;
+    const b = index ? index.getX(tri * 3 + 1) : tri * 3 + 1;
+    const c = index ? index.getX(tri * 3 + 2) : tri * 3 + 2;
     const pick = tri % 3;
     pushEdge(points, position, pick === 0 ? a : b, pick === 0 ? b : c, temp, tri);
     if (tri % (stride * 6 + 1) === 0) {
@@ -1144,18 +1236,22 @@ function addScribbleMeshLines(mesh) {
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
 
   const material = new THREE.LineBasicMaterial({
-    color: ink,
+    color: options.color || greaseInk,
     transparent: true,
-    opacity: 0.16,
+    opacity: options.opacity ?? 0.16,
     depthTest: true,
     depthWrite: false,
   });
 
   const lines = new THREE.LineSegments(geometry, material);
   lines.name = "loose-pencil-lines";
+  lines.userData.isSketchOutline = true;
+  lines.userData.ownsGeometry = true;
   lines.scale.setScalar(1.004);
   lines.renderOrder = 5;
   lines.frustumCulled = false;
+  mesh.userData.sketchOutlines = mesh.userData.sketchOutlines || [];
+  mesh.userData.sketchOutlines.push(lines);
   mesh.add(lines);
 }
 
@@ -1365,11 +1461,21 @@ window.sketchPreview = {
       yaw: Number(modelYaw.toFixed(3)),
       scale: Number(modelScale.toFixed(3)),
       renderMode,
+      lineArtObjects: countLineArtObjects(),
       userModelUploaded: Boolean(uploadedModelSlot),
       hasCustomRef,
       activeModelKind,
     };
   },
 };
+
+function countLineArtObjects() {
+  let count = 0;
+  if (!loadedModel) return count;
+  loadedModel.traverse((child) => {
+    if (child.userData?.isSketchOutline) count += 1;
+  });
+  return count;
+}
 
 animate();

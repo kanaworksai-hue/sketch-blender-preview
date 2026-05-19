@@ -37,7 +37,6 @@
           <div class="workspace-row">
             <span class="tab active"><del>Layot</del><span class="fix">Layout</span></span>
             <button class="tab model-maker-button" id="modelingButton" type="button">Modeling</button>
-            <span class="tab"><del>UV Edting</del><span class="fix">UV Editing</span></span>
             <span class="scene-chip">Scene</span>
             <span class="scene-chip">View Layer</span>
           </div>
@@ -48,7 +47,7 @@
               <li>File > Upload model, or drop a .glb/.gltf/.obj/.fbx/.stl model onto the view.</li>
               <li>Image > Reference, or drop an image onto the view.</li>
               <li>Use Move, Rotate, and Scale on the left toolbar.</li>
-              <li>Use sketch view / normal view to switch rendering.</li>
+              <li>Switch between normal view, sketch view, and Grease Pencil view.</li>
               <li>Use Reset to restore the model position, direction, and scale.</li>
             </ol>
           </aside>
@@ -101,8 +100,8 @@
             </div>
             <canvas id="viewport" aria-label="interactive sketchy 3D viewport"></canvas>
             <div class="drop-hint" id="dropHint">drop model or ref image</div>
-            <div class="object-label" data-model-name="viewport">(0) sample-simple.glb</div>
-            <div class="loading-note" id="loadingNote">Preparing sample</div>
+            <div class="object-label" data-model-name="viewport">(0) No model</div>
+            <div class="loading-note is-hidden" id="loadingNote">Upload a model</div>
             <div class="view-gizmo" aria-hidden="true">
               <span class="z">Z</span>
               <span class="x">X</span>
@@ -114,8 +113,8 @@
               <span><span class="sketch-icon icon-hand"></span></span>
               <span><span class="sketch-icon icon-zoom"></span></span>
             </div>
-            <figure class="ref-note" aria-label="kanaC reference sheet">
-              <img src="./assets/kanaC.png" alt="kanaC rabbit character turnaround reference" />
+            <figure class="ref-note" aria-label="reference sheet" hidden>
+              <img alt="uploaded reference image" />
               <figcaption><del>refe</del><span class="fix">ref</span> sheet</figcaption>
             </figure>
             <aside class="transform-card" aria-label="transform panel">
@@ -143,10 +142,10 @@
               <div class="panel-title"><del>Scne</del><span class="fix">Scene</span></div>
               <div class="tree-row">v Ref</div>
               <div class="tree-row">v <del>Modling</del><span class="fix">Modeling</span></div>
-              <div class="object-pill" data-model-name="object">sample-simple.glb</div>
+              <div class="object-pill" data-model-name="object">No model</div>
             </section>
             <section class="panel modifier-panel">
-              <div class="panel-title"><span data-model-name="modifier">sample-simple.glb</span> &gt; <del>Skech</del><span class="fix">Sketch</span> NPR</div>
+              <div class="panel-title"><span data-model-name="modifier">No model</span> &gt; <del>Skech</del><span class="fix">Sketch</span> NPR</div>
               <button class="add-button upload-model-button" id="renderModeButton" title="Toggle render mode" aria-label="Toggle render mode">
                 <span class="sketch-icon icon-cube"></span>
                 <span data-render-mode-label>sketch view</span>
@@ -165,12 +164,12 @@
                 accept=".png,.jpg,.jpeg,.webp,.gif,image/*"
               />
               <div class="small-card">
-                <div class="split-row"><span>File</span><b data-upload-status>demo</b></div>
-                <div class="split-row"><span>Source</span><b data-model-source>asset</b></div>
+                <div class="split-row"><span>File</span><b data-upload-status>none</b></div>
+                <div class="split-row"><span>Source</span><b data-model-source>none</b></div>
                 <div class="split-row"><span>Render</span><b data-render-mode-field>sketch</b></div>
-                <div class="split-row"><span>Ref</span><b data-ref-status>demo</b></div>
+                <div class="split-row"><span>Ref</span><b data-ref-status>none</b></div>
                 <div class="split-row"><span>Ink</span><b>blue</b></div>
-                <div class="split-row"><span>Style</span><b>toon</b></div>
+                <div class="split-row"><span>Style</span><b data-render-style>toon</b></div>
                 <label><input type="checkbox" checked /> Optimal</label>
               </div>
               <a class="follow-note side-follow" href="https://x.com/KanaWorks_AI" target="_blank" rel="noreferrer">
