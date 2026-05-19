@@ -1,0 +1,6 @@
+assets/*.glb
+assets/*.gltf
+assets/*.bin
+assets/toolbar-reference.png
+preview*.png
+.DS_Store

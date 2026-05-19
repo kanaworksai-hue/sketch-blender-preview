@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sketch Blender Preview</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div class="paper">
+      <div class="app-shell" aria-label="hand drawn blender style viewport">
+        <header class="top-bar">
+          <img class="brand-logo" src="./assets/logo500.png" alt="KanaWorks_AI logo" />
+          <div class="menu-row">
+            <button class="menu-item" id="fileMenuButton" type="button"><del>Fiel</del><span class="fix">File</span></button>
+            <span>Edit</span>
+            <button class="menu-item image-menu-item" id="imageMenuButton" type="button">Image</button>
+            <span><del>Rander</del><span class="fix">Render</span></span>
+            <span>Window</span>
+            <button class="menu-item" id="helpButton" type="button"><del>Halp</del><span class="fix">Help</span></button>
+            <button class="menu-item lang-button" id="languageButton" type="button" aria-label="Switch language">EN</button>
+          </div>
+          <div class="sketch-menu file-menu" id="fileMenu" hidden>
+            <button id="modelMenuUpload" type="button"><span class="sketch-icon icon-plus"></span><span>Upload</span></button>
+          </div>
+          <div class="sketch-menu image-menu" id="imageMenu" hidden>
+            <button id="refMenuUpload" type="button"><span class="sketch-icon icon-open-cube"></span><span>Reference</span></button>
+          </div>
+          <div class="workspace-row">
+            <span class="tab active"><del>Layot</del><span class="fix">Layout</span></span>
+            <button class="tab model-maker-button" id="modelingButton" type="button">Modeling</button>
+            <button class="tab model-maker-button" id="autoModelingButton" type="button">Auto Modeling</button>
+            <span class="tab"><del>UV Edting</del><span class="fix">UV Editing</span></span>
+            <span class="scene-chip">Scene</span>
+            <span class="scene-chip">View Layer</span>
+          </div>
+          <aside class="help-panel" id="helpPanel" hidden aria-label="operation guide">
+            <button class="help-close" id="helpCloseButton" type="button" aria-label="Close help">x</button>
+            <h2 data-help-title>Quick guide</h2>
+            <ol id="helpList">
+              <li>File > Upload, or drop a .glb/.gltf model onto the view.</li>
+              <li>Image > Reference, or drop an image onto the view.</li>
+              <li>Use Move, Rotate, and Scale on the left toolbar.</li>
+              <li>Use sketch view / normal view to switch rendering.</li>
+              <li>Auto Modeling makes a simple proxy from a reference. Modeling returns to your uploaded model.</li>
+            </ol>
+          </aside>
+        </header>
+
+        <main class="main-grid">
+          <aside class="tool-strip left-strip" aria-label="left tools">
+            <div class="tool-palette" aria-hidden="true">
+              <span class="palette-swatch swatch-empty"></span>
+              <span class="palette-swatch swatch-filled"></span>
+              <span class="palette-arrow"></span>
+            </div>
+            <div class="tool-panel select-panel">
+              <button class="is-framed is-active" title="Select" aria-label="Select" data-tool="view"><span class="sketch-icon icon-select"></span></button>
+              <button title="Cursor" aria-label="Cursor"><span class="sketch-icon icon-crosshair"></span></button>
+            </div>
+            <div class="tool-panel transform-panel">
+              <button title="Move" aria-label="Move" data-tool="move"><span class="sketch-icon icon-move"></span></button>
+              <button title="Rotate" aria-label="Rotate" data-tool="rotate"><span class="sketch-icon icon-rotate"></span></button>
+              <button title="Scale" aria-label="Scale" data-tool="scale"><span class="sketch-icon icon-scale"></span></button>
+              <button title="Box Select" aria-label="Box Select"><span class="sketch-icon icon-box-target"></span></button>
+            </div>
+            <div class="tool-panel draw-panel">
+              <button title="Annotate" aria-label="Annotate"><span class="sketch-icon icon-pencil"></span></button>
+              <button title="Measure" aria-label="Measure"><span class="sketch-icon icon-measure"></span></button>
+            </div>
+            <div class="tool-panel mesh-panel">
+              <button title="Box Select" aria-label="Box Select"><span class="sketch-icon icon-open-cube"></span></button>
+            </div>
+            <div class="tool-panel primitive-panel">
+              <button title="Cube Top" aria-label="Cube Top"><span class="sketch-icon icon-cube-top"></span></button>
+              <button title="Cube" aria-label="Cube"><span class="sketch-icon icon-cube"></span></button>
+              <button title="Block" aria-label="Block"><span class="sketch-icon icon-block"></span></button>
+            </div>
+          </aside>
+
+          <section class="viewport-panel">
+            <div class="mode-row">
+              <span class="mode-pill"><del>Edit Mdoe</del><span class="fix">Edit Mode</span></span>
+              <span class="toolbar-doodle"><span class="sketch-icon icon-select"></span></span>
+              <span class="toolbar-doodle"><span class="sketch-icon icon-cube"></span></span>
+              <span>View</span>
+              <span>Select</span>
+              <span>Add</span>
+              <span>Mesh</span>
+              <span>Vertex</span>
+              <span>Edge</span>
+              <span>Face</span>
+              <span>UV</span>
+            </div>
+            <canvas id="viewport" aria-label="interactive sketchy 3D viewport"></canvas>
+            <div class="drop-hint" id="dropHint">drop model or ref image</div>
+            <div class="object-label" data-model-name="viewport">(0) sample-simple.glb</div>
+            <div class="loading-note" id="loadingNote">Preparing sample</div>
+            <div class="view-gizmo" aria-hidden="true">
+              <span class="z">Z</span>
+              <span class="x">X</span>
+              <span class="y">Y</span>
+              <i></i>
+            </div>
+            <div class="float-tools" aria-hidden="true">
+              <span><span class="sketch-icon icon-orbit"></span></span>
+              <span><span class="sketch-icon icon-hand"></span></span>
+              <span><span class="sketch-icon icon-zoom"></span></span>
+            </div>
+            <a class="follow-note" href="https://x.com/KanaWorks_AI" target="_blank" rel="noreferrer">
+              <span>Want more?</span>
+              <strong>follow me</strong>
+              <em>@KanaWorks_AI</em>
+            </a>
+            <figure class="ref-note" aria-label="kanaC reference sheet">
+              <img src="./assets/kanaC.png" alt="kanaC rabbit character turnaround reference" />
+              <figcaption><del>refe</del><span class="fix">ref</span> sheet</figcaption>
+            </figure>
+            <aside class="transform-card" aria-label="transform panel">
+              <h2><del>Transfrom</del><span class="fix">Transform</span></h2>
+              <p><del>Medain</del><span class="fix">Median</span></p>
+              <div class="field-row"><span>X</span><b data-transform-field="x">0.00 m</b></div>
+              <div class="field-row"><span>Y</span><b data-transform-field="y">0.00 m</b></div>
+              <div class="field-row"><span>Z</span><b data-transform-field="z">0.00 m</b></div>
+              <div class="field-row"><span>Dir</span><b data-transform-field="yaw">-8 deg</b></div>
+              <div class="field-row"><span>Scale</span><b data-transform-field="scale">1.00 x</b></div>
+              <div class="split-row"><span>Global</span><span>Local</span></div>
+              <h2><del>Proprty</del><span class="fix">Property</span> data</h2>
+              <div class="split-row property-row"><span>Tool</span><b data-transform-field="tool">view</b></div>
+              <div class="scribble-line"></div>
+              <div class="scribble-line short"></div>
+            </aside>
+          </section>
+
+          <aside class="right-panels" aria-label="properties">
+            <section class="panel outliner">
+              <div class="panel-title"><del>Scne</del><span class="fix">Scene</span></div>
+              <div class="tree-row">v Ref</div>
+              <div class="tree-row">v <del>Modling</del><span class="fix">Modeling</span></div>
+              <div class="object-pill" data-model-name="object">sample-simple.glb</div>
+            </section>
+            <section class="panel modifier-panel">
+              <div class="panel-title"><span data-model-name="modifier">sample-simple.glb</span> &gt; <del>Skech</del><span class="fix">Sketch</span> NPR</div>
+              <button class="add-button upload-model-button" id="renderModeButton" title="Toggle render mode" aria-label="Toggle render mode">
+                <span class="sketch-icon icon-cube"></span>
+                <span data-render-mode-label>sketch view</span>
+              </button>
+              <input
+                class="model-file-input"
+                id="modelFileInput"
+                type="file"
+                accept=".glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2,.basis,model/gltf-binary,model/gltf+json,image/*"
+                multiple
+              />
+              <input
+                class="model-file-input"
+                id="refFileInput"
+                type="file"
+                accept=".png,.jpg,.jpeg,.webp,.gif,image/*"
+              />
+              <div class="small-card">
+                <div class="split-row"><span>File</span><b data-upload-status>demo</b></div>
+                <div class="split-row"><span>Source</span><b data-model-source>asset</b></div>
+                <div class="split-row"><span>Render</span><b data-render-mode-field>sketch</b></div>
+                <div class="split-row"><span>Ref</span><b data-ref-status>demo</b></div>
+                <div class="split-row"><span>Ink</span><b>blue</b></div>
+                <div class="split-row"><span>Style</span><b>toon</b></div>
+                <label><input type="checkbox" checked /> Optimal</label>
+              </div>
+              <div class="scribble-line"></div>
+              <div class="scribble-line short"></div>
+            </section>
+          </aside>
+        </main>
+
+        <footer class="timeline">
+          <div class="playback-row">
+            <span>Playback</span>
+            <span>Keying</span>
+            <span>View</span>
+            <span>Marker</span>
+            <button title="Previous" aria-label="Previous frame"><span class="sketch-icon icon-prev"></span></button>
+            <button title="Play" aria-label="Play"><span class="sketch-icon icon-play"></span></button>
+            <button title="Next" aria-label="Next frame"><span class="sketch-icon icon-next"></span></button>
+          </div>
+          <div class="frames" aria-hidden="true">
+            <span>0</span><span>20</span><span>40</span><span>60</span><span>80</span>
+            <span>100</span><span>120</span><span>140</span><span>160</span><span>180</span>
+          </div>
+          <div class="scrub-line"></div>
+        </footer>
+      </div>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
