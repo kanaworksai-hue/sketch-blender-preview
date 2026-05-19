@@ -1049,14 +1049,9 @@ function applyRenderMode(root, mode) {
       });
       addEdgeInkLines(mesh, {
         color: sketchInk,
-        opacity: 0.68,
+        opacity: 0.28,
         scale: 1.006,
         thresholdAngle: 18,
-      });
-      addScribbleMeshLines(mesh, {
-        color: sketchInk,
-        maxSegments: 1600,
-        opacity: 0.11,
       });
     }
   }
