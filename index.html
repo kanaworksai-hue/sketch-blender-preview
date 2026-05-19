@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -26,7 +26,7 @@
             <span><del>Rander</del><span class="fix">Render</span></span>
             <span>Window</span>
             <button class="menu-item" id="helpButton" type="button"><del>Halp</del><span class="fix">Help</span></button>
-            <button class="menu-item lang-button" id="languageButton" type="button" aria-label="Switch language">中文</button>
+            <button class="menu-item lang-button" id="languageButton" type="button" aria-label="Switch language">EN</button>
           </div>
           <div class="sketch-menu file-menu" id="fileMenu" hidden>
             <button id="modelMenuUpload" type="button"><span class="sketch-icon icon-plus"></span><span>Upload</span></button>
@@ -37,20 +37,19 @@
           <div class="workspace-row">
             <span class="tab active"><del>Layot</del><span class="fix">Layout</span></span>
             <button class="tab model-maker-button" id="modelingButton" type="button">Modeling</button>
-            <button class="tab model-maker-button" id="autoModelingButton" type="button">Auto Modeling</button>
             <span class="tab"><del>UV Edting</del><span class="fix">UV Editing</span></span>
             <span class="scene-chip">Scene</span>
             <span class="scene-chip">View Layer</span>
           </div>
           <aside class="help-panel" id="helpPanel" hidden aria-label="operation guide">
             <button class="help-close" id="helpCloseButton" type="button" aria-label="Close help">x</button>
-            <h2 data-help-title>操作指南</h2>
+            <h2 data-help-title>Quick guide</h2>
             <ol id="helpList">
-              <li>点击文件 > 上传模型，或把 .glb/.gltf/.obj/.fbx/.stl 模型拖进视图。</li>
-              <li>点击图片 > Reference，或把图片拖进视图。</li>
-              <li>左侧工具可以移动、旋转、放大缩小模型。</li>
-              <li>用 sketch view / normal view 切换渲染模式。</li>
-              <li>Auto Modeling 根据参考图生成简易模型；Modeling 切回上传好的模型。</li>
+              <li>File > Upload model, or drop a .glb/.gltf/.obj/.fbx/.stl model onto the view.</li>
+              <li>Image > Reference, or drop an image onto the view.</li>
+              <li>Use Move, Rotate, and Scale on the left toolbar.</li>
+              <li>Use sketch view / normal view to switch rendering.</li>
+              <li>Use Reset to restore the model position, direction, and scale.</li>
             </ol>
           </aside>
         </header>

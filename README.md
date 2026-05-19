@@ -1,6 +1,6 @@
 # Sketch Blender Preview
 
-Language: English | [日本語](README.ja.md) | [中文](README.zh-CN.md)
+Language: English | [日本語](README.ja.md)
 
 A static, hand-drawn Blender-style 3D playground for local model previews. It runs entirely in the browser, so dropped or selected models and reference images stay on the visitor's machine.
 
@@ -10,8 +10,8 @@ A static, hand-drawn Blender-style 3D playground for local model previews. It ru
 - Add a reference image from `Image > Reference`, or drop an image onto the viewport.
 - Switch between normal rendering and the toon/sketch blue-outline style.
 - Move, rotate, and scale the model with the hand-drawn toolbar.
-- Use Auto Modeling to create a simple proxy model from a reference image, then use Modeling to return to the uploaded model.
-- Read the built-in Help panel and cycle the UI language between English, Japanese, and Chinese.
+- Use Reset to restore the model position, direction, and scale.
+- Read the built-in Help panel and cycle the UI language between English and Japanese.
 
 ## Privacy
 

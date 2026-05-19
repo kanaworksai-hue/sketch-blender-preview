@@ -16,7 +16,6 @@ const imageMenu = document.querySelector("#imageMenu");
 const modelMenuUpload = document.querySelector("#modelMenuUpload");
 const refMenuUpload = document.querySelector("#refMenuUpload");
 const modelingButton = document.querySelector("#modelingButton");
-const autoModelingButton = document.querySelector("#autoModelingButton");
 const resetTransformButton = document.querySelector("#resetTransformButton");
 const helpButton = document.querySelector("#helpButton");
 const helpPanel = document.querySelector("#helpPanel");
@@ -103,12 +102,10 @@ let transformDrag = null;
 let activeLocalObjectUrls = [];
 let activeRefObjectUrl = "";
 let renderMode = "sketch";
-let userModelUploaded = false;
 let hasCustomRef = false;
 let uploadedModelSlot = null;
-let autoModelSlot = null;
 let activeModelKind = "sample";
-let currentLanguage = "zh";
+let currentLanguage = "en";
 let customModelName = "";
 const clock = new THREE.Clock();
 const pencilLines = [];
@@ -127,7 +124,6 @@ const faintLineMaterial = new THREE.LineBasicMaterial({
 
 const TEXT = {
   en: {
-    autoModeling: "Auto Modeling",
     dropHint: "drop model or ref image",
     file: "File",
     help: "Help",
@@ -136,7 +132,7 @@ const TEXT = {
       "Image > Reference, or drop an image onto the view.",
       "Use Move, Rotate, and Scale on the left toolbar.",
       "Use sketch view / normal view to switch rendering.",
-      "Auto Modeling makes a simple proxy from a reference. Modeling returns to your uploaded model.",
+      "Use Reset to restore the model position, direction, and scale.",
     ],
     helpTitle: "Quick guide",
     image: "Image",
@@ -150,7 +146,6 @@ const TEXT = {
     upload: "Upload model",
   },
   ja: {
-    autoModeling: "Auto Modeling",
     dropHint: "モデルか参考画像をドロップ",
     file: "ファイル",
     help: "ヘルプ",
@@ -159,7 +154,7 @@ const TEXT = {
       "Image > Reference、または画像をビューにドロップします。",
       "左ツールバーで移動、回転、拡大縮小を操作します。",
       "sketch view / normal view で表示を切り替えます。",
-      "Auto Modeling は参考画像から簡易モデルを作ります。Modeling でアップロード済みモデルへ戻ります。",
+      "Reset でモデルの位置、向き、拡大縮小を元に戻します。",
     ],
     helpTitle: "操作ガイド",
     image: "画像",
@@ -171,29 +166,6 @@ const TEXT = {
     renderSketch: "sketch",
     sketchView: "sketch view",
     upload: "モデル読込",
-  },
-  zh: {
-    autoModeling: "Auto Modeling",
-    dropHint: "拖入模型或参考图",
-    file: "文件",
-    help: "帮助",
-    helpItems: [
-      "点击文件 > 上传模型，或把 .glb/.gltf/.obj/.fbx/.stl 模型拖进视图。",
-      "点击图片 > Reference，或把图片拖进视图。",
-      "左侧工具可以移动、旋转、放大缩小模型。",
-      "用 sketch view / normal view 切换渲染模式。",
-      "Auto Modeling 根据参考图生成简易模型；Modeling 切回上传好的模型。",
-    ],
-    helpTitle: "操作指南",
-    image: "图片",
-    language: "中文",
-    modeling: "Modeling",
-    normalView: "normal view",
-    reference: "Reference",
-    renderNormal: "normal",
-    renderSketch: "sketch",
-    sketchView: "sketch view",
-    upload: "上传模型",
   },
 };
 
@@ -373,10 +345,6 @@ function setupModelingButton() {
   modelingButton?.addEventListener("click", () => {
     showUploadedModel();
   });
-
-  autoModelingButton?.addEventListener("click", () => {
-    createSimpleModelFromReference();
-  });
 }
 
 function setupResetButton() {
@@ -419,7 +387,7 @@ function setupHelpAndLanguage() {
   });
 
   languageButton?.addEventListener("click", () => {
-    const order = ["en", "ja", "zh"];
+    const order = ["en", "ja"];
     const nextIndex = (order.indexOf(currentLanguage) + 1) % order.length;
     currentLanguage = order[nextIndex];
     applyLanguage();
@@ -458,7 +426,7 @@ function updateModelNameField() {
 
 function applyLanguage() {
   const text = getText();
-  document.documentElement.lang = currentLanguage === "zh" ? "zh-CN" : currentLanguage;
+  document.documentElement.lang = currentLanguage;
   if (fileMenuButton) fileMenuButton.textContent = text.file;
   if (imageMenuButton) imageMenuButton.textContent = text.image;
   if (helpButton) helpButton.textContent = text.help;
@@ -466,7 +434,6 @@ function applyLanguage() {
   if (modelMenuUpload?.querySelector("span:last-child")) modelMenuUpload.querySelector("span:last-child").textContent = text.upload;
   if (refMenuUpload?.querySelector("span:last-child")) refMenuUpload.querySelector("span:last-child").textContent = text.reference;
   if (modelingButton) modelingButton.textContent = text.modeling;
-  if (autoModelingButton) autoModelingButton.textContent = text.autoModeling;
   const dropHint = document.querySelector("#dropHint");
   if (dropHint) dropHint.textContent = text.dropHint;
   if (helpTitle) helpTitle.textContent = text.helpTitle;
@@ -780,7 +747,7 @@ function installModel(gltf, meta) {
   installModelScene(gltf.scene, meta, gltf.animations);
 }
 
-function installModelScene(root, meta, animations = [], options = {}) {
+function installModelScene(root, meta, animations = []) {
   root.name = meta.name;
   const meshCount = prepareModelForRendering(root);
   normalizeModel(root);
@@ -791,13 +758,7 @@ function installModelScene(root, meta, animations = [], options = {}) {
     uploadedModelSlot = null;
   }
 
-  if (meta.kind !== "auto" && autoModelSlot?.root && autoModelSlot.root !== loadedModel) {
-    disposeObject(autoModelSlot.root);
-    autoModelSlot = null;
-  }
-
-  const preserveCurrent = Boolean(options.preserveCurrent && loadedModel);
-  clearLoadedModel({ dispose: !preserveCurrent });
+  clearLoadedModel();
   activeLocalObjectUrls = meta.objectUrls || [];
 
   modelRig.add(root);
@@ -829,8 +790,6 @@ function installModelScene(root, meta, animations = [], options = {}) {
     root,
   };
   if (meta.kind === "user") uploadedModelSlot = slot;
-  if (meta.kind === "auto") autoModelSlot = slot;
-  userModelUploaded = Boolean(uploadedModelSlot);
   canvas.dataset.model = JSON.stringify({
     loaded: true,
     meshes: meshCount,
@@ -855,9 +814,6 @@ function clearLoadedModel({ dispose = true } = {}) {
       if (uploadedModelSlot?.root === modelToClear) {
         revokeObjectUrls(uploadedModelSlot.objectUrls || []);
         uploadedModelSlot = null;
-      }
-      if (autoModelSlot?.root === modelToClear) {
-        autoModelSlot = null;
       }
       disposeObject(modelToClear);
     }
@@ -979,27 +935,6 @@ function loadReferenceImage(file) {
   hideLoading();
 }
 
-function createSimpleModelFromReference() {
-  if (!hasCustomRef) {
-    if (refStatus) refStatus.textContent = "need ref";
-    showLoading("Upload ref first");
-    window.setTimeout(hideLoading, 1200);
-    return;
-  }
-
-  const model = makeReferenceProxyModel();
-  installModelScene(model, {
-    name: "ref-simple.glb",
-    source: "generated",
-    sourceLabel: "ref",
-    uploadLabel: "made",
-    kind: "auto",
-  }, [], {
-    preserveCurrent: Boolean(uploadedModelSlot && loadedModel === uploadedModelSlot.root),
-  });
-  setUploadStatus("made");
-}
-
 function makeReferenceProxyModel() {
   const root = new THREE.Group();
   root.name = "ref-simple.glb";
@@ -1029,27 +964,8 @@ function makeReferenceProxyModel() {
   addPart(root, new THREE.SphereGeometry(0.17, 20, 14), dark, [-0.34, 2.08, 0.64], [1.15, 1.15, 0.32], "visor-rim");
   addPart(root, new THREE.SphereGeometry(0.13, 20, 14), red, [-0.34, 2.08, 0.69], [1, 1, 0.24], "red-lens");
   addPart(root, new THREE.SphereGeometry(0.12, 20, 14), eyeBlue, [0.28, 2.1, 0.66], [0.75, 1, 0.24], "blue-eye");
-  addReferencePlane(root);
 
   return root;
-}
-
-function addReferencePlane(root) {
-  if (!activeRefObjectUrl) return;
-  const texture = new THREE.TextureLoader().load(activeRefObjectUrl);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const material = new THREE.MeshStandardMaterial({
-    map: texture,
-    transparent: true,
-    roughness: 0.8,
-    metalness: 0,
-    side: THREE.DoubleSide,
-  });
-  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.72), material);
-  mesh.name = "reference-proxy-card";
-  mesh.position.set(0, 2.72, 0.72);
-  mesh.rotation.x = -0.08;
-  root.add(mesh);
 }
 
 function addPart(parent, geometry, material, position, scale, name, rotation = [0, 0, 0]) {
